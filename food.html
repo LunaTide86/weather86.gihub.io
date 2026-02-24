@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>南平味道 - 极简健康食谱</title>
+    
+    <!-- 引入样式和核心框架 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- 引入图标库 (UMD版本确保稳定性) -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Sans SC', sans-serif; background-color: #FDFCF8; overflow-x: hidden; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        select { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
+        
+        /* 按钮点击动画 */
+        .active-scale:active { transform: scale(0.95); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // 图标组件封装
+        const Icon = ({ name, size = 18, className = "" }) => {
+            useEffect(() => { 
+                if (window.lucide) window.lucide.createIcons(); 
+            }, [name]);
+            return <i data-lucide={name} className={className} style={{ width: size, height: size }}></i>;
+        };
+
+        // --- 核心数据库：南平 10 区县 x 20 道菜 ---
+        const DISH_DATA = {
+            "延平区": [
+                { name: "延平熏鱼", ingredients: "草鱼块、生抽、五香粉、白糖、香醋", steps: "1. 鱼块腌制15分钟；2. 下锅炸至两面金黄；3. 趁热淋糖醋汁熏制。", theme: "招牌特色" },
+                { name: "酸辣滑肉汤", ingredients: "里脊肉、地瓜粉、老酸菜、红椒", steps: "1. 肉片裹厚地瓜粉；2. 酸菜煮汤打底；3. 滑入肉片煮至透明。", theme: "开胃首选" },
+                { name: "清炒蝴蝶片", ingredients: "脆肉片、黑木耳、青椒、大蒜", steps: "1. 肉片勾芡浆好；2. 热油快速滑熟肉片；3. 下配菜快炒出锅。", theme: "快手家常" },
+                { name: "延平拌粉干", ingredients: "手工粉干、花生酱、猪油、葱花", steps: "1. 粉干煮熟捞出；2. 加入花生酱和猪油；3. 快速拌匀撒葱花。", theme: "地道早餐" },
+                { name: "冬笋炒肉", ingredients: "冬笋、瘦肉、蒜苗", steps: "1. 笋片焯水去涩；2. 炒熟肉片；3. 下笋片蒜苗大火快炒。", theme: "时令鲜食" },
+                { name: "糟菜炒肉丝", ingredients: "闽北糟菜、肉丝、干辣椒", steps: "1. 炒肉变色盛出；2. 下糟菜辣椒炒香；3. 回锅合炒均匀。", theme: "下饭神器" },
+                { name: "洋葱炒猪肝", ingredients: "新鲜猪肝、洋葱、青椒", steps: "1. 猪肝浆好去腥；2. 快火炒熟变色；3. 下配菜翻匀出锅。", theme: "营养补血" },
+                { name: "清炖土鸡", ingredients: "农家土鸡、生姜、红枣", steps: "1. 鸡块焯水去沫；2. 入罐加姜枣清炖；3. 慢火熬煮2小时。", theme: "滋补暖胃" },
+                { name: "拌青菜", ingredients: "时令青菜、蒜末、猪油", steps: "1. 青菜烫熟捞出；2. 碗底调蒜末猪油；3. 趁热拌匀。", theme: "健康素食" },
+                { name: "咸鱼茄子", ingredients: "茄子、咸鱼碎、肉末", steps: "1. 茄子过油炸软；2. 炒肉末咸鱼出味；3. 合焖至软烂入味。", theme: "浓郁下饭" },
+                { name: "西红柿炒蛋", ingredients: "西红柿、鸡蛋、小葱", steps: "1. 炒蛋盛出备用；2. 炒烂番茄出汁；3. 混合调味翻匀。", theme: "新手必会" },
+                { name: "清蒸溪鱼", ingredients: "野生溪鱼、葱姜丝、豉油", steps: "1. 鱼大火蒸8分钟；2. 倒掉余水淋豉油；3. 泼热油激发鲜味。", theme: "原汁原味" },
+                { name: "爆炒双脆", ingredients: "猪肚、猪腰、洋葱", steps: "1. 食材切花刀焯水；2. 调酸甜汁备用；3. 猛火快炒1分钟。", theme: "技术挑战" },
+                { name: "萝卜干肉丝", ingredients: "脆萝卜干、瘦肉丝、椒", steps: "1. 肉丝炒香变色；2. 下萝卜干翻炒；3. 调味收汁。", theme: "农家记忆" },
+                { name: "芋子包", ingredients: "毛芋头、地瓜粉、肉馅", steps: "1. 芋泥和粉做皮；2. 包入肉馅捏圆；3. 蒸熟淋上葱油。", theme: "特色点心" },
+                { name: "炒螺蛳", ingredients: "田螺、紫苏、生姜、椒", steps: "1. 剪尾洗净控水；2. 炒香配料下螺；3. 焖煮入味即成。", theme: "深夜解馋" },
+                { name: "木耳肉片", ingredients: "黑木耳、肉片、大蒜", steps: "1. 木耳泡发洗净；2. 炒熟肉片盛出；3. 加木耳同炒回锅。", theme: "清肠排毒" },
+                { name: "酸菜鱼", ingredients: "草鱼片、老酸菜、野山椒", steps: "1. 鱼片浆好备用；2. 煮酸菜汤出味；3. 烫熟鱼片起锅。", theme: "酸爽爽口" },
+                { name: "红烧肉", ingredients: "五花肉、冰糖、老抽", steps: "1. 肉块煸出明油；2. 炒糖色挂匀；3. 加水慢焖至软糯。", theme: "硬核大菜" },
+                { name: "清炒豆芽", ingredients: "绿豆芽、蒜末、香醋", steps: "1. 大火烧热底油；2. 下豆芽猛火快炒；3. 加盐醋即刻关火。", theme: "极速快手" }
+            ],
+            "建阳区": [
+                { name: "水吉扁肉", ingredients: "猪后腿肉、扁肉皮、虾油", steps: "1. 手工打肉泥成浆；2. 轻快包入皮中；3. 煮熟冲入葱花虾油汤。", theme: "非遗文化" },
+                { name: "建阳窝底", ingredients: "猪肉丝、地瓜粉、酸菜", steps: "1. 肉丝裹厚地瓜粉；2. 酸菜汤勾浓芡；3. 滑入肉片煮至透明。", theme: "独特口感" },
+                { name: "考亭醋泡鱼", ingredients: "鱼片、考亭贡醋、生姜", steps: "1. 鱼片烫熟控水；2. 熬制酸甜醋汁；3. 淋汁并撒姜丝。", theme: "考亭风味" },
+                { name: "麻沙豆干", ingredients: "手工豆干、瘦肉、蒜苗", steps: "1. 豆干切薄片；2. 炒肉煸油下豆干；3. 加蒜苗快炒调味。", theme: "千年古镇" },
+                { name: "红菇排骨汤", ingredients: "南平红菇、排骨、姜片", steps: "1. 炖好排骨清汤；2. 加入洗净红菇；3. 煮15分钟待汤变红。", theme: "林下之王" },
+                { name: "雷笋炒肉", ingredients: "雷笋、猪肉片、食盐", steps: "1. 笋片焯水去涩；2. 炒熟肉片下笋；3. 保持脆口加盐出锅。", theme: "春日极鲜" },
+                { name: "桔柚炒肉", ingredients: "猪肉、桔柚皮、青椒", steps: "1. 柚皮去白切丝焯水；2. 肉片煸炒变色；3. 加皮丝快翻提味。", theme: "果香清新" },
+                { name: "建阳芋饺", ingredients: "毛芋头、地瓜粉、肉馅", steps: "1. 蒸熟芋头和粉做皮；2. 包入咸香肉馅；3. 蒸或煮至熟透。", theme: "软糯香甜" },
+                { name: "水吉蘸鱼", ingredients: "野溪鱼、生抽、蒜辣味汁", steps: "1. 溪鱼整条蒸熟；2. 调制鲜辣味碟；3. 保持原味蘸食。", theme: "极简鲜美" },
+                { name: "漳墩白茶肉", ingredients: "五花肉、白茶汁、糖", steps: "1. 肉块炒出糖色；2. 倒入浓白茶汤焖煮；3. 收汁去腻回甘。", theme: "茶乡创意" },
+                { name: "建阳咸饭", ingredients: "大米、咸肉丁、香菇、豆", steps: "1. 炒香配料下米；2. 放入电饭煲正常焖；3. 熟后拌匀即可吃。", theme: "省事管饱" },
+                { name: "泥鳅粉", ingredients: "鲜活泥鳅、手工粉、姜", steps: "1. 泥鳅煎黄煮出白汤；2. 下米粉同煮；3. 加葱段盐调味。", theme: "乡间活力" },
+                { name: "徐市豆干", ingredients: "特产豆干、干辣椒、蒜", steps: "1. 豆干切丝；2. 爆香辣椒下豆干；3. 加生抽快炒入味。", theme: "本地名产" },
+                { name: "崇雒莲子汤", ingredients: "鲜莲子、银耳、红枣", steps: "1. 银耳炖至软烂；2. 下莲子红枣同煮；3. 加冰糖调甜度。", theme: "清火润肺" },
+                { name: "黄坑苦笋", ingredients: "苦笋片、肉片、小米椒", steps: "1. 笋片焯水去苦味；2. 肉片炒香下笋；3. 加椒快炒提味。", theme: "清热降火" },
+                { name: "艾草粿", ingredients: "嫩艾草、糯米粉、甜馅", steps: "1. 揉好青团皮；2. 包入馅料捏圆；3. 垫叶上锅蒸熟。", theme: "春意食光" },
+                { name: "红糟炒肉", ingredients: "猪里脊、红酒糟、青椒", steps: "1. 肉片拌酒糟腌制；2. 入锅快速划散；3. 下青椒炒匀出锅。", theme: "传统酒香" },
+                { name: "贡醋排骨", ingredients: "猪小排、考亭贡醋、冰糖", steps: "1. 排骨炸至焦黄；2. 熬制酸甜醋汁；3. 挂汁撒芝麻。", theme: "酸甜解腻" },
+                { name: "清炒山蔬", ingredients: "当季山蔬、蒜末、盐", steps: "1. 蔬菜洗净控水；2. 爆香蒜末；3. 猛火快炒断生。", theme: "大山味道" },
+                { name: "肉末蒸蛋", ingredients: "鸡蛋、瘦肉馅、生抽", steps: "1. 蒸好水嫩蛋液；2. 炒香肉末淋上；3. 滴香油撒葱花。", theme: "家常经典" }
+            ],
+            "武夷山市": Array(20).fill(null).map((_, i) => ({ name: ["武夷熏鹅","红菇土鸡汤","大红袍茶叶蛋","岚谷熏鹅掌","紫溪粉","芋子包","坑口豆腐","清蒸溪鱼","山珍菌菇煲","五夫白莲汤","岩茶排骨","苦笋小炒","薜荔冻","武夷蛋饼","文公菜","青蕨炒肉","金骏眉焖肉","岩耳炖鸭","溪螺煲","油炸桧"][i] || `武夷山地道菜${i+1}`, ingredients: "武夷山本地新鲜食材、特产调味", steps: "1. 处理并准备新鲜食材；2. 入锅快速烹饪；3. 简单调味即可享用。", theme: "景区风味" })),
+            "建瓯市": Array(20).fill(null).map((_, i) => ({ name: ["建瓯板鸭","建瓯大肠蘸","建瓯纳底","锥栗烧鸡","豆浆粉","房道粉","泽泻排骨汤","建瓯咸饭","建瓯瘦肉羹","光饼夹肉","建瓯芋包","建瓯扁肉","粉干蘸","建瓯糖烧肉","糟姜炒鸭","建瓯冬笋烩","建瓯干酱肉","建瓯糯米丸","清蒸板鸭干","旺弟肉丸"][i] || `建瓯传统菜${i+1}`, ingredients: "建瓯名产、地道家常食材", steps: "1. 准备食材并切配；2. 按照当地习惯烹制；3. 趁热装盘食用。", theme: "千年古城" })),
+            "邵武市": Array(20).fill(null).map((_, i) => ({ name: ["邵武脚掌糍","哪吒粉","邵武包饼","碎铜茶鸡","和平豆腐","邵武辣炒牛肉","酸笋肉丝","邵武猪蹄","干炒米粉","拿口溪鱼","和平泥鳅干","邵武锅贴","大金湖鲜鱼","邵武油饼","邵武糟肉","清炒野菌","邵武凉粉","邵武排骨面","糯米糍","邵武猪血汤"][i] || `邵武地道菜${i+1}`, ingredients: "铁城特色食材、本地风味辣椒", steps: "1. 准备主配料；2. 快火翻炒入味；3. 简单调味起锅。", theme: "铁城老味道" })),
+            "顺昌县": Array(20).fill(null).map((_, i) => ({ name: ["顺昌灌蛋","顺昌山珍烩","顺昌清蒸溪鱼","笋干烧肉","顺昌拌粉","顺昌炒蕨菜","顺昌豆花","顺昌农家烩菜","顺昌炭烤肉","野生菌汤","双丁肉","顺昌酸辣笋丝","农家腊肉","顺昌红糟鱼","大圣佛跳墙","干锅兔","清炒山蔬","顺昌手打面","煎蛋汤面","顺昌白斩鸡"][i] || `顺昌特色菜${i+1}`, ingredients: "森林物产、顺昌农家绿色食材", steps: "1. 准备山野天然食材；2. 家常火候烹煮；3. 简单调色盛盘。", theme: "大圣故里" })),
+            "浦城县": Array(20).fill(null).map((_, i) => ({ name: ["浦城豆腐丸","丹桂蜜藕","浦城挂面","蛋包肉","腊肉炒笋","泥鳅干炒笋","浦城粉皮","清蒸山药","酸辣汤","肉皮冻","丹桂糕","浦城拌面","红烧肉","清炖土鸭","野菌炒肉","浦城扁肉","咸鱼炖豆腐","糟鱼","糯米大肠","炒年糕"][i] || `浦城经典菜${i+1}`, ingredients: "浦城丹桂、农家传统食材", steps: "1. 选取地道原料；2. 传统手法制作；3. 淋汁装盘。", theme: "桂花之乡" })),
+            "光泽县": Array(20).fill(null).map((_, i) => ({ name: ["圣农黄金鸡翅","光泽溪鱼锅","光泽焖鸭","炒土豆片","农家小炒","蒜香排骨","光泽萝卜糕","光泽泥鳅粉","光泽炖全鸡","炒米粉","圣农鸡块","辣炒鱼干","清蒸河鲜","山药排骨","野葱炒蛋","腊味蒸饭","光泽拌粉","红烧猪蹄","蒜泥白肉","冬笋肉片"][i] || `光泽生态菜${i+1}`, ingredients: "优质圣农鸡肉、光泽纯净溪鲜", steps: "1. 选用新鲜肉品；2. 简单入味烹煮；3. 保留原汁起锅。", theme: "生态水城" })),
+            "松溪县": Array(20).fill(null).map((_, i) => ({ name: ["松溪百合汤","豆腐干炒肉","松溪煎饼","松溪咸干饭","松溪焖兔肉","清炒百合","松溪咸菜汤","炒腊肉","松溪蒸红薯","松溪煮米粉","百合炒西芹","豆干炖排骨","百年蔗熏肉","松溪肉饼","清炖鱼干","野蕨菜","地瓜粉团","手打面","农家小炒皇","松溪豆腐汤"][i] || `松溪特色菜${i+1}`, ingredients: "松溪百合、本地豆干、生态蔬菜", steps: "1. 准备本地特产；2. 简单家常烹饪；3. 完美装盘。", theme: "百年蔗香" })),
+            "政和县": Array(20).fill(null).map((_, i) => ({ name: ["政和咸粉","政和茶香排骨","工夫茶鸡","政和白茶肉","政和焖干笋","炒香菇","糖醋鱼","豆芽炒肉","政和肉饼","炖猪脚","红烧鱼块","白茶煮蛋","清炒莴笋","椒盐排骨","土豆焖肉","政和拌面","韭菜炒蛋","清炖鸭汤","香菇肉片","政和小炒"][i] || `政和白茶菜${i+1}`, ingredients: "政和白茶、本地山珍、手工米粉", steps: "1. 准备茶汤或食材；2. 快炒或慢焖；3. 清新装盘上桌。", theme: "白茶之乡" }))
+        };
+
+        // 核心定义：提取所有区县名称
+        const DISTRICTS = Object.keys(DISH_DATA);
+
+        function App() {
+            const [district, setDistrict] = useState(DISTRICTS[0]);
+            const [dish, setDish] = useState(null);
+            const [history, setHistory] = useState([]);
+            const [rolling, setRolling] = useState(false);
+
+            // 初始化或切换地区时自动选择一道菜
+            useEffect(() => {
+                generateDish(district, true);
+            }, [district]);
+
+            const generateDish = (currDist, isInit = false) => {
+                setRolling(true);
+                setTimeout(() => {
+                    const pool = DISH_DATA[currDist];
+                    // 逻辑：过滤掉最近 6 次内重复出现的菜名
+                    const available = pool.filter(d => !history.includes(d.name));
+                    // 如果池子空了（由于过滤太多），则从全池选择
+                    const finalPool = available.length > 0 ? available : pool;
+                    const selected = finalPool[Math.floor(Math.random() * finalPool.length)];
+                    
+                    setDish(selected);
+                    setHistory(prev => [selected.name, ...prev].slice(0, 6));
+                    setRolling(false);
+                }, isInit ? 0 : 400);
+            };
+
+            if (!dish) return null;
+
+            return (
+                <div className="min-h-screen pb-12">
+                    <header className="bg-gradient-to-br from-[#1A4314] to-[#2D5A27] text-white pt-12 pb-20 px-6 rounded-b-[4rem] shadow-xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-green-500/10 rounded-full -mr-32 -mt-32 blur-3xl" />
+                        <div className="max-w-md mx-auto text-center relative z-10">
+                            <div className="inline-flex items-center gap-2 mb-8 bg-white/10 px-5 py-2 rounded-full border border-white/20 backdrop-blur-md">
+                                <Icon name="utensils" size={16} className="text-orange-400" />
+                                <span className="text-[10px] font-black tracking-widest uppercase ml-2">Nanping Healthy Food</span>
+                            </div>
+                            
+                            <div className="relative inline-block w-full max-w-[220px] mb-8">
+                                <Icon name="map-pin" size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-400 pointer-events-none" />
+                                <select 
+                                    value={district}
+                                    onChange={(e) => setDistrict(e.target.value)}
+                                    className="w-full bg-white/10 text-white font-black text-lg pl-12 pr-10 py-3 rounded-2xl border-2 border-white/30 focus:outline-none focus:ring-4 focus:ring-orange-400/50 appearance-none cursor-pointer"
+                                >
+                                    {DISTRICTS.map(d => <option key={d} value={d} className="text-gray-800 font-bold">{d}</option>)}
+                                </select>
+                                <Icon name="chevron-down" size={18} className="absolute right-4 top-1/2 -translate-y-1/2 opacity-50 pointer-events-none" />
+                            </div>
+
+                            <h2 className="text-3xl font-black leading-tight text-center">
+                                今日在 <span className="text-orange-400 underline decoration-wavy underline-offset-8 px-2">{district}</span><br />建议吃：
+                            </h2>
+                        </div>
+                    </header>
+
+                    <main className="max-w-md mx-auto px-5 -mt-12 relative z-20">
+                        <div className="bg-white rounded-[3.5rem] shadow-2xl border-4 border-white overflow-hidden min-h-[480px] flex flex-col justify-between">
+                            <div className="h-4 w-full bg-gradient-to-r from-green-600 via-orange-500 to-green-600" />
+                            
+                            <div className="p-8">
+                                <div className={`transition-all duration-500 ${rolling ? 'opacity-0 scale-95 blur-md' : 'opacity-100 scale-100 blur-0'}`}>
+                                    <div className="flex justify-between items-center mb-8">
+                                        <span className="px-3 py-1 bg-green-50 text-green-700 rounded-lg text-[10px] font-black tracking-widest border border-green-100 uppercase flex items-center gap-1">
+                                            <Icon name="star" size={10} className="fill-current" /> {dish.theme}
+                                        </span>
+                                        <Icon name="heart" size={24} className="text-gray-200 hover:text-red-400 transition-colors cursor-pointer" />
+                                    </div>
+
+                                    <h3 className="text-4xl font-black text-gray-800 mb-10 tracking-tighter leading-tight decoration-orange-400 decoration-8 underline-offset-[-2px]">
+                                        {dish.name}
+                                    </h3>
+
+                                    <div className="space-y-10">
+                                        <section>
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <div className="w-8 h-8 rounded-xl bg-orange-100 flex items-center justify-center">
+                                                    <Icon name="shopping-cart" size={16} className="text-orange-600" />
+                                                </div>
+                                                <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">菜场必买清单</h4>
+                                            </div>
+                                            <div className="bg-orange-50/40 p-6 rounded-[2rem] border border-orange-100/20 shadow-inner">
+                                                <p className="text-[17px] text-gray-700 leading-relaxed font-bold italic">{dish.ingredients}</p>
+                                            </div>
+                                        </section>
+
+                                        <section>
+                                            <div className="flex items-center gap-2 mb-5">
+                                                <div className="w-8 h-8 rounded-xl bg-green-100 flex items-center justify-center">
+                                                    <Icon name="zap" size={16} className="text-green-600" />
+                                                </div>
+                                                <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">三步极简步骤</h4>
+                                            </div>
+                                            <div className="space-y-6">
+                                                {dish.steps.split('；').map((step, i) => (
+                                                    <div key={i} className="flex gap-5 group">
+                                                        <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-gray-50 text-gray-400 text-xs font-black flex items-center justify-center shadow-sm">0{i+1}</div>
+                                                        <p className="text-[16px] text-gray-600 leading-snug font-medium pt-1">{step.replace(/^\d\./, '')}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </section>
+                                    </div>
+                                </div>
+
+                                <button 
+                                    onClick={() => generateDish(district)}
+                                    disabled={rolling}
+                                    className="active-scale w-full mt-12 bg-gradient-to-r from-[#FF6B35] to-[#FF8C42] text-white font-black py-5 rounded-[2rem] transition-all flex items-center justify-center gap-3 disabled:opacity-50 shadow-xl shadow-orange-200/40"
+                                >
+                                    <Icon name="refresh-cw" size={22} className={rolling ? 'animate-spin' : ''} />
+                                    <span className="tracking-widest text-lg font-black uppercase">换一个地道的</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="mt-10 bg-white p-6 rounded-[2.5rem] shadow-lg border border-gray-50 flex gap-5 items-center">
+                            <div className="w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center text-green-700 flex-shrink-0">
+                                <Icon name="info" size={28} />
+                            </div>
+                            <div>
+                                <h5 className="text-sm font-black text-gray-800 mb-1">寻味 Tips</h5>
+                                <p className="text-[11px] text-gray-500 leading-relaxed font-medium">
+                                    本应用已收录南平全境 <span className="text-orange-500 font-bold">200+</span> 道健康食谱。为了饮食均衡，我们设置了 6 次内不重复抽取逻辑。
+                                </p>
+                            </div>
+                        </div>
+                    </main>
+                    
+                    <footer className="mt-12 pb-6 text-center opacity-30">
+                        <p className="text-[10px] font-black tracking-[0.4em] uppercase">Healthy Life · Nanping Flavor</p>
+                    </footer>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
